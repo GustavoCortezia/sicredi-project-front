@@ -73,8 +73,8 @@ async function handleGetHour() {
       <div>
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a maior movimentação: <span class="mr-5">{{ maiorData?.data }}</span> Total: <span>{{ maiorData?.total }}</span>  </h4>
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a menor movimentação: <span class="mr-5">{{ menorData?.data }}</span>   Total: <span>{{ menorData?.total }}</span> </h4>
-        <h4 class="info-topic pa-5 mb-3 rounded-xl">Maior soma de movimentações: <span class="mr-5">{{ maiorSoma?.data }}</span>   Total: <span>{{ maiorSoma?.total }}</span> </h4>
-        <h4 class="info-topic pa-5 mb-3 rounded-xl">Menor soma de movimentações: <span class="mr-5">{{ menorSoma?.data }}</span>  Total: <span>{{ menorSoma?.total }}</span>  </h4>
+        <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a maior soma de movimentações: <span class="mr-5">{{ maiorSoma?.data }}</span>   Total: <span>R${{ maiorSoma?.total }}</span> </h4>
+        <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a menor soma de movimentações: <span class="mr-5">{{ menorSoma?.data }}</span>  Total: <span>R${{ menorSoma?.total }}</span>  </h4>
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Dia da semana com mais movimentações RX1 e PX1: <span class="mr-5">{{ semanaRX1PX1?.data }}</span>  Total: <span>{{ semanaRX1PX1?.total }}</span>  </h4>
       </div>
 
@@ -111,7 +111,7 @@ async function handleGetHour() {
       </div>
 
 
-      <h3 class="my-6 text-green">Verificar créditos e débitado por hora</h3>
+      <h3 class="my-6 text-green">Verificar total de créditos e débitos por hora</h3>
 
       <div class="div-inputs d-flex ">
       <v-combobox
@@ -119,9 +119,11 @@ async function handleGetHour() {
         label="Horário"
         width="50px"
         :items="[
-          '0:00', '1:00', '2:00', '3:00', '4:00', '5:00', '6:00', '7:00', '8:00', '9:00',
-          '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
-          '19:00', '20:00', '21:00', '22:00', '23:00'
+          '0:00 - 1:00', '1:00 - 2:00', '2:00 - 3:00', '3:00 - 4:00', '4:00 - 5:00',
+          '5:00 - 6:00', '6:00 - 7:00', '7:00 - 8:00', '8:00 - 9:00', '9:00 - 10:00',
+          '10:00 - 11:00', '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00',
+          '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00', '18:00 - 19:00', '19:00 - 20:00',
+          '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00', '23:00 - 24:00'
         ]"
       ></v-combobox>
 
@@ -131,7 +133,7 @@ async function handleGetHour() {
 
       <h4 v-if="procurado" > Coop/Agência não encontrado(s)</h4>
       <div v-if="HoraSelecionada" class="d-flex justify-center" >
-        <h4 class="mx-5">Hora: <span> {{ HoraSelecionada?.hora }}</span></h4>
+        <h4 class="mx-5">Horário: <span> {{ horario }}</span></h4>
         <h4 class="mx-5">Créditos: <span>R${{ HoraSelecionada?.total_credito }}</span> </h4>
         <h4 class="mx-5">Débitos: <span>R${{ HoraSelecionada?.total_debito }}</span> </h4>
       </div>

@@ -6,6 +6,10 @@ import type { MovimentacaoType } from '@/types/MovimentacaoType';
 const file = ref<File | null>(null);
 const errorMessage = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
+const fileAdded = ref(false);
+
+// Contador de linhas processadas
+const linesProcessed = ref(0);
 
 // Tamanho do bloco e do lote
 const CHUNK_SIZE = 1024 * 1024;
@@ -21,6 +25,8 @@ const handleFileChange = (event: Event) => {
     console.log("handleFileChange: Nome do arquivo:", file.value.name);
     successMessage.value = null;
     errorMessage.value = null;
+    fileAdded.value = true;
+    linesProcessed.value = 0; // Resetar contador ao selecionar novo arquivo
   }
 };
 
@@ -100,6 +106,7 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
   let pendingMovimentacao: MovimentacaoType | null = null;
 
   lines.forEach((line) => {
+    linesProcessed.value++; // Atualiza o contador de linhas processadas
     line = line.trim();
 
     // Detecta e armazena Coop/Agência se estiverem presentes na linha
@@ -123,7 +130,6 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
       }
     } else {
       // Linha de movimentação
-      // Alterei o regex para corrigir os campos de "documento", "código" e "descrição"
       const movimentacaoRegex = /^(\d{5}-\d)\s+([A-Za-z\s]+)\s+([A-Za-z0-9]*)\s+([A-Za-z0-9]+)\s+([A-Za-z\s]+)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+(\d{2})$/;
       const match = line.match(movimentacaoRegex);
 
@@ -137,22 +143,15 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
         debito = match[6]?.trim() ? parseFloat(match[6].replace(/\./g, '').replace(',', '.')) : 0;
         credito = match[7]?.trim() ? parseFloat(match[7].replace(/\./g, '').replace(',', '.')) : 0;
 
-        // Se o campo documento estiver vazio, define como string vazia
         let documento = match[3]?.trim() || "";
-
-        // O código é o valor na quarta posição (não o documento)
         let codigo = match[4]?.trim();
-
         let descricao = match[5]?.trim();
 
-        // Se o código for "PB3", garantimos que o documento será vazio
-        if (match[3]?.trim() == "PB3") {
-          documento = "-";
-          codigo = "PB3";
-          descricao = "PAGTO BOLETO CAIXA ELETR";
+        if (match[3]?.trim().length === 3) {
+          documento = ' - ';
+          codigo = match[3];
+          descricao = match[4] + ' ' + match[5];
         }
-
-        // A descrição é o valor da quinta posição
 
         pendingMovimentacao = {
           dataHora: "",
@@ -160,9 +159,9 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
           coop: currentCoop || '0000',
           conta: match[1],
           nome: match[2].trim(),
-          documento: documento,  // Campo documento pode ser vazio
-          codigo: codigo,        // Código agora é o valor correto
-          descricao: descricao,  // Descrição agora está correta
+          documento,
+          codigo,
+          descricao,
           debito: debito > 0 ? debito : 0,
           credito: credito > 0 ? credito : 0,
           descricaoFinal: match[8],
@@ -200,41 +199,51 @@ const sendInBatches = async (data: any[], batchSize: number) => {
 
         console.log(`sendInBatches: Lote ${i / batchSize + 1} enviado com sucesso:`, response.data);
         success = true;
-      } catch (error:any) {
+      } catch (error: any) {
         if (error.response?.status === 429) {
           console.error(`sendInBatches: Erro 429 - Too Many Requests, aguardando ${RETRY_DELAY / 1000} segundos antes de tentar novamente.`);
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         } else {
-          console.error(`sendInBatches: Erro ao enviar o lote ${i / batchSize + 1}:`, error);
-          break;
+          console.error(`sendInBatches: Erro ao enviar o lote ${i / batchSize + 1}:`, error.message);
+          throw new Error(error.message);
         }
       }
+
+      attempt++;
+    }
+
+    if (!success) {
+      throw new Error(`Falha ao enviar lote após ${attempt} tentativas.`);
     }
   }
+
+  console.log("sendInBatches: Todos os lotes foram enviados com sucesso.");
 };
 </script>
 
 <template>
   <div class="d-flex justify-center align-center flex-column">
-
     <h2 class="mb-15 text-green">Adicionar Arquivo:</h2>
-      <!-- Área de upload -->
 
-        <form @submit.prevent="uploadFile" class="d-flex justify-center flex-column">
-          <div class="file-upload-area">
-            <input
-              class="input-file"
-              type="file"
-              @change="handleFileChange"
-            />
-          </div>
-          <v-btn class="mt-5" type="submit">Upload</v-btn>
-        </form>
+    <!-- Área de upload -->
+    <form @submit.prevent="uploadFile" class="d-flex justify-center flex-column">
+      <div class="file-upload-area">
+        <input
+          class="input-file"
+          type="file"
+          @change="handleFileChange"
+        />
+        <!-- Exibe a mensagem "Arquivo adicionado" se um arquivo for selecionado -->
+        <div v-if="fileAdded" class="file-added-message">
+          Arquivo adicionado!
+        </div>
+      </div>
+      <p class="linhas-processadas" v-if="linesProcessed > 0">Linhas processadas: {{ linesProcessed }}</p>
+      <v-btn class="mt-5" type="submit">Upload</v-btn>
+    </form>
 
-        <p v-if="errorMessage" style="color: red;">{{ errorMessage }}</p>
-        <p v-if="successMessage" style="color: green;">{{ successMessage }}</p>
-
-
+    <p v-if="errorMessage" style="color: red;">{{ errorMessage }}</p>
+    <p v-if="successMessage" style="color: green;">{{ successMessage }}</p>
   </div>
 </template>
 
@@ -272,6 +281,18 @@ const sendInBatches = async (data: any[], batchSize: number) => {
 /* Feedback visual quando um arquivo é arrastado para a área */
 .input-file:focus {
   outline: none;
+}
+
+/* Estilo da mensagem de arquivo adicionado */
+.file-added-message {
+  position: absolute;
+  font-size: 18px;
+  color: green;
+  font-weight: bold;
+}
+
+.linhas-processadas{
+  font-size: 0.8rem;
 }
 </style>
 
