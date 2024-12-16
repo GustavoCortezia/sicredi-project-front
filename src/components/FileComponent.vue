@@ -123,12 +123,12 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
       }
     } else {
       // Linha de movimentação
-      const movimentacaoRegex = /^(\d{5}-\d)\s+([A-Za-z0-9\s\.]+)\s+([A-Za-z0-9]+)\s+(\d{3})\s+([A-Za-z\s]+)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+(\d{2})$/;
+      // Alterei o regex para corrigir os campos de "documento", "código" e "descrição"
+      const movimentacaoRegex = /^(\d{5}-\d)\s+([A-Za-z\s]+)\s+([A-Za-z0-9]*)\s+([A-Za-z0-9]+)\s+([A-Za-z\s]+)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+(\d{2})$/;
       const match = line.match(movimentacaoRegex);
 
       if (match) {
         console.log("Movimentação extraída:", match);
-
 
         let debito = 0;
         let credito = 0;
@@ -137,16 +137,32 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
         debito = match[6]?.trim() ? parseFloat(match[6].replace(/\./g, '').replace(',', '.')) : 0;
         credito = match[7]?.trim() ? parseFloat(match[7].replace(/\./g, '').replace(',', '.')) : 0;
 
+        // Se o campo documento estiver vazio, define como string vazia
+        let documento = match[3]?.trim() || "";
+
+        // O código é o valor na quarta posição (não o documento)
+        let codigo = match[4]?.trim();
+
+        let descricao = match[5]?.trim();
+
+        // Se o código for "PB3", garantimos que o documento será vazio
+        if (match[3]?.trim() == "PB3") {
+          documento = "-";
+          codigo = "PB3";
+          descricao = "PAGTO BOLETO CAIXA ELETR";
+        }
+
+        // A descrição é o valor da quinta posição
 
         pendingMovimentacao = {
           dataHora: "",
-          agencia: currentAgencia || '00000',
-          coop: currentCoop || '000',
+          agencia: currentAgencia || '00',
+          coop: currentCoop || '0000',
           conta: match[1],
           nome: match[2].trim(),
-          documento: match[3],
-          codigo: match[4],
-          descricao: match[5],
+          documento: documento,  // Campo documento pode ser vazio
+          codigo: codigo,        // Código agora é o valor correto
+          descricao: descricao,  // Descrição agora está correta
           debito: debito > 0 ? debito : 0,
           credito: credito > 0 ? credito : 0,
           descricaoFinal: match[8],
