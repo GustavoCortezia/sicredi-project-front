@@ -19,3 +19,13 @@ export async function postFile(batch:any){
     return error?.response;
   }
 }
+
+export async function getInfos(){
+  try {
+    const response = await client.get('http://localhost:8000/api/metricas');
+    return response;
+  } catch (error:any) {
+    return error?.response;
+  }
+}
+

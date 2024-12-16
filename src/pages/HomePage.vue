@@ -2,7 +2,7 @@
 import FileComponent from '@/components/FileComponent.vue';
 import router from '@/router';
 
-function linkMetricas() {
+function goToInformations() {
   router.push('/informations')
 }
 </script>
@@ -12,7 +12,7 @@ function linkMetricas() {
 
   <div class="div-file d-flex justify-center align-center flex-column">
     <FileComponent class="file mb-10"/>
-    <v-btn @click="linkMetricas" class="btn-metricas bg-green d-flex">Ver sumarizações e métricas das movimentações</v-btn>
+    <v-btn @click="goToInformations" class="btn-metricas bg-green d-flex">Ver sumarizações e métricas das movimentações</v-btn>
   </div>
 
 </template>
@@ -25,6 +25,7 @@ function linkMetricas() {
   }
 
   .div-file{
+    background-color: #f4f7fa;
     height: 100%;
   }
 
