@@ -8,34 +8,29 @@ const errorMessage = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 const fileAdded = ref(false);
 
-// Contador de linhas processadas
+
 const linesProcessed = ref(0);
 
-// Tamanho do bloco e do lote
 const CHUNK_SIZE = 1024 * 1024;
 const BATCH_SIZE = 100;
 const RETRY_DELAY = 3000;
 
-// Função para capturar o arquivo selecionado
+
 const handleFileChange = (event: Event) => {
-  console.log("handleFileChange: Arquivo selecionado.");
   const target = event.target as HTMLInputElement;
   if (target.files) {
     file.value = target.files[0];
-    console.log("handleFileChange: Nome do arquivo:", file.value.name);
     successMessage.value = null;
     errorMessage.value = null;
     fileAdded.value = true;
-    linesProcessed.value = 0; // Resetar contador ao selecionar novo arquivo
+    linesProcessed.value = 0;
   }
 };
 
-// Função para enviar o arquivo ao back-end em blocos
+
 const uploadFile = async () => {
-  console.log("uploadFile: Iniciando upload.");
   if (!file.value) {
     errorMessage.value = "Por favor, selecione um arquivo.";
-    console.log("uploadFile: Nenhum arquivo selecionado.");
     return;
   }
 
@@ -43,7 +38,6 @@ const uploadFile = async () => {
     successMessage.value = null;
     errorMessage.value = null;
 
-    console.log("uploadFile: Processando arquivo em blocos.");
     await processFileInChunks(file.value);
     successMessage.value = "Arquivo enviado com sucesso!";
     console.log("uploadFile: Upload finalizado com sucesso.");
@@ -53,51 +47,35 @@ const uploadFile = async () => {
   }
 };
 
-// Função para processar o arquivo em blocos
 const processFileInChunks = async (file: File) => {
-  console.log("processFileInChunks: Iniciando processamento do arquivo:", file.name);
   const reader = new FileReader();
   let offset = 0;
 
   const readNextChunk = () => {
-    console.log(`processFileInChunks: Lendo bloco. Offset: ${offset}, CHUNK_SIZE: ${CHUNK_SIZE}`);
     const slice = file.slice(offset, offset + CHUNK_SIZE);
     reader.readAsText(slice);
   };
 
   reader.onload = async (e: ProgressEvent<FileReader>) => {
-    console.log("processFileInChunks: Bloco carregado com sucesso.");
     if (e.target?.result) {
       const chunkContent = e.target.result as string;
-      console.log("processFileInChunks: Conteúdo do bloco lido, tamanho:", chunkContent.length);
       const movimentacoes = parseChunk(chunkContent);
 
-      console.log("processFileInChunks: Quantidade de movimentações processadas:", movimentacoes.length);
       if (movimentacoes.length > 0) {
         await sendInBatches(movimentacoes, BATCH_SIZE);
       }
 
       offset += CHUNK_SIZE;
       if (offset < file.size) {
-        console.log("processFileInChunks: Lendo próximo bloco.");
         readNextChunk();
-      } else {
-        console.log("processFileInChunks: Todos os blocos processados.");
       }
     }
   };
-
-  reader.onerror = () => {
-    console.error("processFileInChunks: Erro ao ler o arquivo.");
-    throw new Error("Erro ao ler o arquivo.");
-  };
-
   readNextChunk();
 };
 
 // Função para processar o conteúdo de um bloco
 const parseChunk = (chunkContent: string): MovimentacaoType[] => {
-  console.log("parseChunk: Iniciando parsing do bloco.");
   const lines = chunkContent.split('\n');
   const movimentacoes: MovimentacaoType[] = [];
 
@@ -106,23 +84,19 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
   let pendingMovimentacao: MovimentacaoType | null = null;
 
   lines.forEach((line) => {
-    linesProcessed.value++; // Atualiza o contador de linhas processadas
+    linesProcessed.value++;
     line = line.trim();
 
-    // Detecta e armazena Coop/Agência se estiverem presentes na linha
     const coopAgenciaRegex = /^(\d{4})\/(\d{2})/;
     const matchCoopAgencia = line.match(coopAgenciaRegex);
     if (matchCoopAgencia) {
       currentCoop = matchCoopAgencia[1];
       currentAgencia = matchCoopAgencia[2];
-      console.log(`parseChunk: Coop/Agência atualizadas: Coop=${currentCoop}, Agência=${currentAgencia}`);
     }
 
-    // Identifica linha de data (dd/mm/yyyy hh:mm)
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}$/;
     if (dateRegex.test(line)) {
       if (pendingMovimentacao) {
-        // Se há uma movimentação pendente, associa a data encontrada
         pendingMovimentacao.dataHora = formatDate(line);
         movimentacoes.push(pendingMovimentacao);
         console.log("parseChunk: Movimentação finalizada:", pendingMovimentacao);
@@ -134,12 +108,9 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
       const match = line.match(movimentacaoRegex);
 
       if (match) {
-        console.log("Movimentação extraída:", match);
-
         let debito = 0;
         let credito = 0;
 
-        // Extrai débito e crédito da penúltima e última coluna, respectivamente
         debito = match[6]?.trim() ? parseFloat(match[6].replace(/\./g, '').replace(',', '.')) : 0;
         credito = match[7]?.trim() ? parseFloat(match[7].replace(/\./g, '').replace(',', '.')) : 0;
 
@@ -170,7 +141,6 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
     }
   });
 
-  console.log("parseChunk: Parsing concluído. Movimentações extraídas:", movimentacoes.length);
   return movimentacoes;
 };
 
@@ -182,10 +152,8 @@ const formatDate = (input: string): string => {
 
 // Função para enviar dados em lotes com controle de retries
 const sendInBatches = async (data: any[], batchSize: number) => {
-  console.log("sendInBatches: Enviando dados em lotes. Total de movimentações:", data.length);
   for (let i = 0; i < data.length; i += batchSize) {
     const batch = data.slice(i, i + batchSize);
-    console.log(`sendInBatches: Enviando lote ${i / batchSize + 1}. Movimentações neste lote:`, batch.length);
 
     let attempt = 0;
     let success = false;
@@ -197,11 +165,11 @@ const sendInBatches = async (data: any[], batchSize: number) => {
           },
         });
 
-        console.log(`sendInBatches: Lote ${i / batchSize + 1} enviado com sucesso:`, response.data);
+        console.log(`Lote ${i / batchSize + 1} enviado com sucesso:`, response.data);
         success = true;
       } catch (error: any) {
         if (error.response?.status === 429) {
-          console.error(`sendInBatches: Erro 429 - Too Many Requests, aguardando ${RETRY_DELAY / 1000} segundos antes de tentar novamente.`);
+          console.error(`Requisições demais, aguardando ${RETRY_DELAY / 1000} segundos antes de tentar novamente.`);
           await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         } else {
           console.error(`sendInBatches: Erro ao enviar o lote ${i / batchSize + 1}:`, error.message);
@@ -211,13 +179,7 @@ const sendInBatches = async (data: any[], batchSize: number) => {
 
       attempt++;
     }
-
-    if (!success) {
-      throw new Error(`Falha ao enviar lote após ${attempt} tentativas.`);
-    }
   }
-
-  console.log("sendInBatches: Todos os lotes foram enviados com sucesso.");
 };
 </script>
 

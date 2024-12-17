@@ -27,13 +27,13 @@ async function handleGetInfos() {
   const response = await getInfos();
   console.log(response.data);
 
-  maiorData.value = response.data.maior_data_movimentacao;
-  maiorSoma.value = response.data.maior_soma_movimentacao;
-  menorData.value = response.data.menor_data_movimentacao;
-  menorSoma.value = response.data.menor_soma_movimentacao;
-  semanaRX1PX1.value = response.data.movimentacoes_dia_semana_RX1_PX1;
-  valorMovimentado.value = response.data.movimentacoes_por_coop_agencia;
-  MovimentacoesHora.value = response.data.creditos_debitos_por_hora;
+  maiorData.value = response.data.metricas.maior_data_movimentacao;
+  maiorSoma.value = response.data.metricas.maior_soma_movimentacao;
+  menorData.value = response.data.metricas.menor_data_movimentacao;
+  menorSoma.value = response.data.metricas.menor_soma_movimentacao;
+  semanaRX1PX1.value = response.data.metricas.movimentacoes_dia_semana_RX1_PX1;
+  valorMovimentado.value = response.data.metricas.movimentacoes_por_coop_agencia;
+  MovimentacoesHora.value = response.data.metricas.creditos_debitos_por_hora;
 }
 
 async function handlegetValue() {
