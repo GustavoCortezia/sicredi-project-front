@@ -85,11 +85,18 @@ const processarBloco = (conteudoBloco: string): MovimentacaoType[] => {
     linesProcessed.value++;
     line = line.trim();
 
-    const coopAgenciaRegex = /^(\d{4})\/(\d{2})/;
+    const coopAgenciaRegex = /^(\d{4})\/(\d{2})(?:\s+(.+))?$/;
     const matchCoopAgencia = line.match(coopAgenciaRegex);
+
     if (matchCoopAgencia) {
       currentCoop = matchCoopAgencia[1];
       currentAgencia = matchCoopAgencia[2];
+
+      if (matchCoopAgencia[3]) {
+        line = matchCoopAgencia[3];
+      } else {
+        return;
+      }
     }
 
     const dateRegex = /^\d{2}\/\d{2}\/\d{4}\s\d{2}:\d{2}$/;
@@ -122,9 +129,9 @@ const processarBloco = (conteudoBloco: string): MovimentacaoType[] => {
           descricao = match[4] + ' ' + match[5];
         }
 
-        if(match[2].trim().length > 16){
-          nome = match[2].trim().slice(0, 16).trim()
-          documento = match[2].trim().slice(17).trim()
+        if (match[2].trim().length > 16) {
+          nome = match[2].trim().slice(0, 16).trim();
+          documento = match[2].trim().slice(17).trim();
         }
 
         pendingMovimentacao = {
