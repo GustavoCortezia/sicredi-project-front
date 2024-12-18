@@ -111,6 +111,7 @@ const processarBloco = (conteudoBloco: string): MovimentacaoType[] => {
         debito = match[6]?.trim() ? parseFloat(match[6].replace(/\./g, '').replace(',', '.')) : 0;
         credito = match[7]?.trim() ? parseFloat(match[7].replace(/\./g, '').replace(',', '.')) : 0;
 
+        let nome = match[2]?.trim();
         let documento = match[3]?.trim() || "";
         let codigo = match[4]?.trim();
         let descricao = match[5]?.trim();
@@ -121,12 +122,17 @@ const processarBloco = (conteudoBloco: string): MovimentacaoType[] => {
           descricao = match[4] + ' ' + match[5];
         }
 
+        if(match[2].trim().length > 16){
+          nome = match[2].trim().slice(0, 16).trim()
+          documento = match[2].trim().slice(17).trim()
+        }
+
         pendingMovimentacao = {
           dataHora: "",
           agencia: currentAgencia || '00',
           coop: currentCoop || '0000',
           conta: match[1],
-          nome: match[2].trim(),
+          nome: nome,
           documento,
           codigo,
           descricao,
