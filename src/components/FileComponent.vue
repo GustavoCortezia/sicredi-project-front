@@ -108,7 +108,7 @@ const processarBloco = (conteudoBloco: string): MovimentacaoType[] => {
         pendingMovimentacao = null;
       }
     } else {
-      const movimentacaoRegex = /^(\d{5}-\d)\s+([A-Za-z\s]+)\s+([A-Za-z0-9]*)\s+([A-Za-z0-9]+)\s+([A-Za-z\s]+)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+(\d{2})$/;
+      const movimentacaoRegex = /^(\d{5}-\d)\s+([A-Za-z\s]+)\s+([\w]*)\s+([A-Za-z0-9]+)\s+([A-Za-z\s]+)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+(\d{2})$/;
       const match = line.match(movimentacaoRegex);
 
       if (match) {

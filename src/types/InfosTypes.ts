@@ -13,3 +13,8 @@ export interface CreditosDebitosHora{
   total_credito: string
   total_debito: string
 }
+
+export interface SemanaRX1PX1{
+  dia: number,
+  total: number
+}

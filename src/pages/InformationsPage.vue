@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getInfos } from '@/services/api';
-import type { CreditosDebitosHora, DataMovimentacao, MovimentacoesCoopAgencia } from '@/types/InfosTypes';
+import type { CreditosDebitosHora, DataMovimentacao, MovimentacoesCoopAgencia, SemanaRX1PX1 } from '@/types/InfosTypes';
 
 onMounted( async () => {
   spinner.value = true;
@@ -14,12 +14,13 @@ const coop = ref<string>('');
 const horario = ref<string>('-');
 const procurado = ref<boolean>(false);
 const horaProcurada = ref<boolean>(false);
+const diaSemana = ref<string>('');
 
 const maiorData = ref<DataMovimentacao>();
 const maiorSoma = ref<DataMovimentacao>();
 const menorData = ref<DataMovimentacao>();
 const menorSoma = ref<DataMovimentacao>();
-const semanaRX1PX1 = ref<DataMovimentacao>();
+const semanaRX1PX1 = ref<SemanaRX1PX1>();
 const valorMovimentado = ref<MovimentacoesCoopAgencia[]>();
 const valorSelecionado = ref<MovimentacoesCoopAgencia>();
 const MovimentacoesHora = ref<CreditosDebitosHora[]>()
@@ -37,6 +38,33 @@ async function handleGetInfos() {
   semanaRX1PX1.value = response.data.metricas.movimentacoes_dia_semana_RX1_PX1;
   valorMovimentado.value = response.data.metricas.movimentacoes_por_coop_agencia;
   MovimentacoesHora.value = response.data.metricas.creditos_debitos_por_hora;
+
+  switch (response.data.metricas.movimentacoes_dia_semana_RX1_PX1.dia) {
+  case 1:
+    diaSemana.value = 'domingo';
+    break;
+  case 2:
+    diaSemana.value = 'segunda-feira';
+    break;
+  case 3:
+    diaSemana.value = 'terça-feira';
+    break;
+  case 4:
+    diaSemana.value = 'quarta-feira';
+    break;
+  case 5:
+    diaSemana.value = 'quinta-feira';
+    break;
+  case 6:
+    diaSemana.value = 'sexta-feira';
+    break;
+  case 7:
+    diaSemana.value = 'sábado';
+    break;
+  default:
+    diaSemana.value = 'Desconhecido';
+    break;
+}
 }
 
 async function handlegetValue() {
@@ -84,7 +112,7 @@ async function handleGetHour() {
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a menor movimentação: <span class="mr-5">{{ menorData?.data }}</span>   Total: <span>{{ menorData?.total }}</span> </h4>
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a maior soma de movimentações: <span class="mr-5">{{ maiorSoma?.data }}</span>   Total: <span>R${{ maiorSoma?.total }}</span> </h4>
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a menor soma de movimentações: <span class="mr-5">{{ menorSoma?.data }}</span>  Total: <span>R${{ menorSoma?.total }}</span>  </h4>
-        <h4 class="info-topic pa-5 mb-3 rounded-xl">Dia da semana com mais movimentações RX1 e PX1: <span class="mr-5">{{ semanaRX1PX1?.data }}</span>  Total: <span>{{ semanaRX1PX1?.total }}</span>  </h4>
+        <h4 class="info-topic pa-5 mb-3 rounded-xl">Dia da semana com mais movimentações RX1 e PX1: <span class="mr-5">{{ diaSemana }}</span>  Total: <span>{{ semanaRX1PX1?.total }}</span>  </h4>
       </div>
 
 
