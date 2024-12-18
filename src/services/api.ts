@@ -8,21 +8,18 @@ export const client = axios.create({
 });
 
 
-export async function postFile(batch:any){
+export async function postarArquivo(batch: any) {
   try {
-    console.log("s1");
-
-    const response = await client.post('http://localhost:8000/api/processar', { movimentacoes: batch });
-    console.log("s2");
+    const response = await client.post('/processar', { movimentacoes: batch });
     return response;
-  } catch (error:any) {
+  } catch (error: any) {
     return error?.response;
   }
 }
 
 export async function getInfos(){
   try {
-    const response = await client.get('http://localhost:8000/api/metricas');
+    const response = await client.get('/metricas');
     return response;
   } catch (error:any) {
     return error?.response;

@@ -21,7 +21,7 @@ Este é um projeto Laravel e Vue 3.x (Typescript), que utiliza um banco de dados
 1. Clone o repositório para a sua máquina local:
 
     ```bash
-    git clone https://github.com/seu-usuario/sicredi-project.git
+    git clone https://github.com/GustavoCortezia/sicredi-project-front.git
     ```
 
 2. instale as dependências do VueJS:
@@ -35,3 +35,7 @@ Este é um projeto Laravel e Vue 3.x (Typescript), que utiliza um banco de dados
     ```bash
     npm run dev
     ```
+
+## Visite o projeto Backend
+
+[text](https://github.com/GustavoCortezia/sicredi-project-back.git)

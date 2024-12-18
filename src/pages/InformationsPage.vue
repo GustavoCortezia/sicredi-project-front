@@ -2,15 +2,18 @@
 import { getInfos } from '@/services/api';
 import type { CreditosDebitosHora, DataMovimentacao, MovimentacoesCoopAgencia } from '@/types/InfosTypes';
 
-onMounted( () => {
-  handleGetInfos();
+onMounted( async () => {
+  spinner.value = true;
+ await handleGetInfos();
+  spinner.value = false;
 })
 
+const spinner = ref<boolean>(false)
 const agencia = ref<string>('');
 const coop = ref<string>('');
-const horario = ref<string>('');
+const horario = ref<string>('-');
 const procurado = ref<boolean>(false);
-const horaProcutada = ref<boolean>(false);
+const horaProcurada = ref<boolean>(false);
 
 const maiorData = ref<DataMovimentacao>();
 const maiorSoma = ref<DataMovimentacao>();
@@ -20,7 +23,7 @@ const semanaRX1PX1 = ref<DataMovimentacao>();
 const valorMovimentado = ref<MovimentacoesCoopAgencia[]>();
 const valorSelecionado = ref<MovimentacoesCoopAgencia>();
 const MovimentacoesHora = ref<CreditosDebitosHora[]>()
-const HoraSelecionada = ref<CreditosDebitosHora>()
+const HoraSelecionada = ref<CreditosDebitosHora>();
 
 
 async function handleGetInfos() {
@@ -50,13 +53,12 @@ async function handlegetValue() {
 }
 
 async function handleGetHour() {
-  horaProcutada.value = true
+  horaProcurada.value = true
   if (MovimentacoesHora.value) {
     MovimentacoesHora.value.forEach(movimentacao => {
       if(movimentacao.hora == horario.value.split(':')[0]){
         HoraSelecionada.value = movimentacao;
-        console.log(HoraSelecionada.value);
-        horaProcutada.value = false;
+        horaProcurada.value = false;
 
       }
     });
@@ -66,11 +68,18 @@ async function handleGetHour() {
 </script>
 
 <template>
+<div  v-if="spinner"  class="spinner-div">
+  <v-progress-circular class="spinner" indeterminate color="green" :size="60" :width="10"  aria-label="Loading"/>
+</div>
+
+
+
+
   <NavComponent />
   <div class="infos-div d-flex align-center flex-column">
       <h2 class="d-flex justify-center mb-15 text-green">Sumarizações e Métricas</h2>
 
-      <div>
+      <div class="infos-topic-div">
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a maior movimentação: <span class="mr-5">{{ maiorData?.data }}</span> Total: <span>{{ maiorData?.total }}</span>  </h4>
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a menor movimentação: <span class="mr-5">{{ menorData?.data }}</span>   Total: <span>{{ menorData?.total }}</span> </h4>
         <h4 class="info-topic pa-5 mb-3 rounded-xl">Data com a maior soma de movimentações: <span class="mr-5">{{ maiorSoma?.data }}</span>   Total: <span>R${{ maiorSoma?.total }}</span> </h4>
@@ -80,7 +89,7 @@ async function handleGetHour() {
 
 
 
-      <h3 class="my-6 text-green">Verificar quantidade e valor movimentado por coop/agência</h3>
+      <h3 class="subtitulo my-6 text-green">Verificar quantidade e valor movimentado por coop/agência</h3>
 
       <div class="div-inputs d-flex ">
         <v-text-field
@@ -111,10 +120,11 @@ async function handleGetHour() {
       </div>
 
 
-      <h3 class="my-6 text-green">Verificar total de créditos e débitos por hora</h3>
+      <h3 class="subtitulo my-6 text-green">Verificar total de créditos e débitos por hora</h3>
 
       <div class="div-inputs d-flex ">
       <v-combobox
+      class="text-field"
         v-model="horario"
         label="Horário"
         width="50px"
@@ -131,14 +141,20 @@ async function handleGetHour() {
 
       </div>
 
-      <h4 v-if="procurado" > Coop/Agência não encontrado(s)</h4>
+      <h4 v-if="horaProcurada" > Coop/Agência não encontrado(s)</h4>
       <div v-if="HoraSelecionada" class="d-flex justify-center" >
-        <h4 class="mx-5">Horário: <span> {{ horario }}</span></h4>
+        <h4 class="mx-5">Horário: <span> {{ HoraSelecionada?.hora }}</span></h4>
         <h4 class="mx-5">Créditos: <span>R${{ HoraSelecionada?.total_credito }}</span> </h4>
         <h4 class="mx-5">Débitos: <span>R${{ HoraSelecionada?.total_debito }}</span> </h4>
       </div>
 
     </div>
+
+    <v-footer class="bg-green d-flex justify-center flex-column" height="100px">
+     <p>Desenvolvido por Gustavo Blume Cortezia</p>
+     <p>12/2024</p>
+  </v-footer>
+
 </template>
 
 <style scoped>
@@ -170,5 +186,48 @@ async function handleGetHour() {
     padding-bottom: 100px;
     background-color: #f4f7fa;
     height: 100%;
+  }
+
+
+.spinner-div{
+  position: fixed;
+  width: 100vw;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+
+
+  @media (max-width: 650px){
+    .infos-div{
+      width: 100% !important;
+    }
+    .btn-text{
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      white-space: normal;
+    }
+    .div-inputs{
+      width: 100% !important;
+      align-items: center;
+      justify-content: center !important;
+      flex-direction: column;
+    }
+    .text-field{
+      width: 50% !important;
+    }
+    .subtitulo{
+      font-size: 1rem;
+    }
+
+    .infos-topic-div{
+      width: 90%;
+  }
+
   }
 </style>

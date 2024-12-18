@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
-import axios from 'axios';
 import type { MovimentacaoType } from '@/types/MovimentacaoType';
+import { postarArquivo } from '@/services/api';
 
 const file = ref<File | null>(null);
 const errorMessage = ref<string | null>(null);
@@ -11,9 +11,9 @@ const fileAdded = ref(false);
 
 const linesProcessed = ref(0);
 
-const CHUNK_SIZE = 1024 * 1024;
-const BATCH_SIZE = 100;
-const RETRY_DELAY = 3000;
+const tamBloco = 1024 * 1024 * 10;
+const tamLote = 1000;
+const delay = 3000;
 
 
 const handleFileChange = (event: Event) => {
@@ -38,45 +38,43 @@ const uploadFile = async () => {
     successMessage.value = null;
     errorMessage.value = null;
 
-    await processFileInChunks(file.value);
+    await processarEmBlocos(file.value);
     successMessage.value = "Arquivo enviado com sucesso!";
-    console.log("uploadFile: Upload finalizado com sucesso.");
   } catch (error) {
     errorMessage.value = "Erro ao processar ou enviar o arquivo.";
     console.error("uploadFile: Erro:", error);
   }
 };
 
-const processFileInChunks = async (file: File) => {
+const processarEmBlocos = async (file: File) => {
   const reader = new FileReader();
   let offset = 0;
 
-  const readNextChunk = () => {
-    const slice = file.slice(offset, offset + CHUNK_SIZE);
+  const lerProximoBloco = () => {
+    const slice = file.slice(offset, offset + tamBloco);
     reader.readAsText(slice);
   };
 
   reader.onload = async (e: ProgressEvent<FileReader>) => {
     if (e.target?.result) {
-      const chunkContent = e.target.result as string;
-      const movimentacoes = parseChunk(chunkContent);
+      const conteudoBloco = e.target.result as string;
+      const movimentacoes = processarBloco(conteudoBloco);
 
       if (movimentacoes.length > 0) {
-        await sendInBatches(movimentacoes, BATCH_SIZE);
+        await sendInBatches(movimentacoes, tamLote);
       }
 
-      offset += CHUNK_SIZE;
+      offset += tamBloco;
       if (offset < file.size) {
-        readNextChunk();
+        lerProximoBloco();
       }
     }
   };
-  readNextChunk();
+  lerProximoBloco();
 };
 
-// Função para processar o conteúdo de um bloco
-const parseChunk = (chunkContent: string): MovimentacaoType[] => {
-  const lines = chunkContent.split('\n');
+const processarBloco = (conteudoBloco: string): MovimentacaoType[] => {
+  const lines = conteudoBloco.split('\n');
   const movimentacoes: MovimentacaoType[] = [];
 
   let currentCoop: string | null = null;
@@ -99,11 +97,10 @@ const parseChunk = (chunkContent: string): MovimentacaoType[] => {
       if (pendingMovimentacao) {
         pendingMovimentacao.dataHora = formatDate(line);
         movimentacoes.push(pendingMovimentacao);
-        console.log("parseChunk: Movimentação finalizada:", pendingMovimentacao);
+        console.log("Bloco Processado: ", pendingMovimentacao);
         pendingMovimentacao = null;
       }
     } else {
-      // Linha de movimentação
       const movimentacaoRegex = /^(\d{5}-\d)\s+([A-Za-z\s]+)\s+([A-Za-z0-9]*)\s+([A-Za-z0-9]+)\s+([A-Za-z\s]+)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+((?:\d{1,3}(?:\.\d{3})*(?:,\d{2}))?)\s+(\d{2})$/;
       const match = line.match(movimentacaoRegex);
 
@@ -150,7 +147,6 @@ const formatDate = (input: string): string => {
   return `${year}/${month}/${day} ${time}:00`;
 };
 
-// Função para enviar dados em lotes com controle de retries
 const sendInBatches = async (data: any[], batchSize: number) => {
   for (let i = 0; i < data.length; i += batchSize) {
     const batch = data.slice(i, i + batchSize);
@@ -159,21 +155,16 @@ const sendInBatches = async (data: any[], batchSize: number) => {
     let success = false;
     while (!success && attempt < 5) {
       try {
-        const response = await axios.post('http://localhost:8000/api/processar', { movimentacoes: batch }, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        const response = await postarArquivo(batch);
 
-        console.log(`Lote ${i / batchSize + 1} enviado com sucesso:`, response.data);
+        console.log(`Enviando lote ${i / batchSize + 1}`, response.data);
         success = true;
       } catch (error: any) {
         if (error.response?.status === 429) {
-          console.error(`Requisições demais, aguardando ${RETRY_DELAY / 1000} segundos antes de tentar novamente.`);
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          console.error(`Requisições demais, aguardando ${delay / 1000} segundos antes de tentar novamente.`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         } else {
           console.error(`sendInBatches: Erro ao enviar o lote ${i / batchSize + 1}:`, error.message);
-          throw new Error(error.message);
         }
       }
 
@@ -187,7 +178,6 @@ const sendInBatches = async (data: any[], batchSize: number) => {
   <div class="d-flex justify-center align-center flex-column">
     <h2 class="mb-15 text-green">Adicionar Arquivo:</h2>
 
-    <!-- Área de upload -->
     <form @submit.prevent="uploadFile" class="d-flex justify-center flex-column">
       <div class="file-upload-area">
         <input
@@ -195,7 +185,7 @@ const sendInBatches = async (data: any[], batchSize: number) => {
           type="file"
           @change="handleFileChange"
         />
-        <!-- Exibe a mensagem "Arquivo adicionado" se um arquivo for selecionado -->
+
         <div v-if="fileAdded" class="file-added-message">
           Arquivo adicionado!
         </div>
@@ -212,40 +202,36 @@ const sendInBatches = async (data: any[], batchSize: number) => {
 
 
 <style scoped>
-/* Estilo da área de upload com bordas pontilhadas */
+
 .file-upload-area {
   position: relative;
   width: 600px;
-  height: 200px; /* Tamanho desejado para a área de upload */
-  border: 3px dashed rgb(0, 184, 0); /* Borda pontilhada */
+  height: 200px;
+  border: 3px dashed rgb(0, 184, 0);
   border-radius: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-/* Estilo para o input, removendo o texto e deixando a área de borda visível */
 .input-file {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0; /* Tornando o texto invisível */
+  opacity: 0;
   cursor: pointer;
 }
 
-/* Mensagem visual quando o arquivo está sobre a área */
 .file-upload-area:hover {
-  background-color: rgba(44, 250, 3, 0.1); /* Cor suave ao passar o mouse */
+  background-color: rgba(0, 184, 0, 0.1);
 }
 
-/* Feedback visual quando um arquivo é arrastado para a área */
 .input-file:focus {
   outline: none;
 }
 
-/* Estilo da mensagem de arquivo adicionado */
 .file-added-message {
   position: absolute;
   font-size: 18px;
@@ -256,6 +242,13 @@ const sendInBatches = async (data: any[], batchSize: number) => {
 .linhas-processadas{
   font-size: 0.8rem;
 }
+
+@media (max-width: 650px){
+    .file, .file-upload-area {
+      width: 300px !important;
+    }
+  }
+
 </style>
 
 
