@@ -16,7 +16,6 @@ import router from '@/router';
     <v-app-bar-title><img class="nav-img mt-11" width="130px" src="../assets/sicredi-825x293.png" alt=""></v-app-bar-title>
     <v-btn @click="goToHome"class="mr-5" icon="mdi-file-document-outline"></v-btn>
     <v-btn @click="goToInformations" class="mr-7" icon="mdi-information"></v-btn>
-    <!-- <v-btn icon="mdi-account"></v-btn> -->
   </v-app-bar>
 </template>
 
