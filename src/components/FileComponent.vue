@@ -198,7 +198,6 @@ const attemptSend = async (batch: any) => {
       if (error.response?.status === 429) {
         console.error(`Requisições demais, aguardando ${delay / 1000} segundos antes de tentar novamente.`);
         await new Promise(resolve => setTimeout(resolve, delay));
-        // Você pode implementar um backoff exponencial aqui, aumentando 'delay' com cada tentativa falha.
       } else {
         console.error(`Erro ao enviar o lote:`, error.message);
       }
