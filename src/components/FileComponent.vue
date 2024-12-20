@@ -8,12 +8,11 @@ const errorMessage = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
 const fileAdded = ref(false);
 
-
 const linesProcessed = ref(0);
 
 const tamBloco = 1024 * 1024 * 10;
 const tamLote = 1000;
-const delay = 3000;
+const delay = 1000;
 
 
 const handleFileChange = (event: Event) => {
@@ -61,7 +60,7 @@ const processarEmBlocos = async (file: File) => {
       const movimentacoes = processarBloco(conteudoBloco);
 
       if (movimentacoes.length > 0) {
-        await sendInBatches(movimentacoes, tamLote);
+        await enviarEmBlocos(movimentacoes, tamLote);
       }
 
       offset += tamBloco;
@@ -129,9 +128,9 @@ const processarBloco = (conteudoBloco: string): MovimentacaoType[] => {
           descricao = match[4] + ' ' + match[5];
         }
 
-        if (match[2].trim().length > 16) {
-          nome = match[2].trim().slice(0, 16).trim();
-          documento = match[2].trim().slice(17).trim();
+        if (match[2].trim().length > 25) {
+          nome = match[2].trim().slice(0, 25).trim();
+          documento = match[2].trim().slice(26).trim();
         }
 
         pendingMovimentacao = {
@@ -160,29 +159,51 @@ const formatDate = (input: string): string => {
   return `${year}/${month}/${day} ${time}:00`;
 };
 
-const sendInBatches = async (data: any[], batchSize: number) => {
+const enviarEmBlocos = async (data: any[], batchSize: number, maxConcurrent: number = 15) => {
+  const queue: any[] = [];
+  let activeRequests = 0;
+
+  const processQueue = async () => {
+    while (queue.length > 0 && activeRequests < maxConcurrent) {
+      const batch = queue.shift();
+      activeRequests++;
+      try {
+        await attemptSend(batch);
+      } catch (error:any) {
+        console.error('Erro ao enviar o lote:', error.message);
+      } finally {
+        activeRequests--;
+        processQueue();
+      }
+    }
+  };
+
   for (let i = 0; i < data.length; i += batchSize) {
     const batch = data.slice(i, i + batchSize);
+    queue.push(batch);
+  }
 
-    let attempt = 0;
-    let success = false;
-    while (!success && attempt < 5) {
-      try {
-        const response = await postarArquivo(batch);
+  await Promise.all(Array.from({ length: maxConcurrent }, processQueue));
+};
 
-        console.log(`Enviando lote ${i / batchSize + 1}`, response.data);
-        success = true;
-      } catch (error: any) {
-        if (error.response?.status === 429) {
-          console.error(`Requisições demais, aguardando ${delay / 1000} segundos antes de tentar novamente.`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        } else {
-          console.error(`sendInBatches: Erro ao enviar o lote ${i / batchSize + 1}:`, error.message);
-        }
+const attemptSend = async (batch: any) => {
+  let attempt = 0;
+  let success = false;
+  while (!success && attempt < 5) {
+    try {
+      const response = await postarArquivo(batch);
+      console.log(`Enviando lote com sucesso`, response.data);
+      success = true;
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        console.error(`Requisições demais, aguardando ${delay / 1000} segundos antes de tentar novamente.`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        // Você pode implementar um backoff exponencial aqui, aumentando 'delay' com cada tentativa falha.
+      } else {
+        console.error(`Erro ao enviar o lote:`, error.message);
       }
-
-      attempt++;
     }
+    attempt++;
   }
 };
 </script>
